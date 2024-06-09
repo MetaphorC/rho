@@ -1,7 +1,6 @@
 
 use std::io;
-use std::fs::{File, self};
-use std::process::exit;
+use std::fs::{self, File};
 use std::path::Path;
 use xml::reader::{XmlEvent, EventReader};
 use std::collections::HashMap;
@@ -88,24 +87,37 @@ fn read_entire_xml_file<P: AsRef<Path>>(file_path: P) -> io::Result<String> {
 }
 
 fn main() -> io::Result<()>{
-    let content = read_entire_xml_file("docs.gl/gl4/glVertexAttribDivisor.xhtml")?
-        .chars()
-        .collect::<Vec<_>>();    
-    for token in Lexer::new(&content) {
-        println!("{token}", token = token.iter().map(|x| x.to_ascii_uppercase()).collect::<String>());
-    }
-
-    /*
-    let all_documents = HashMap::<Path, HashMap<String, usize>>::new();
-
     let dir_path = "docs.gl/gl4";
     let dir = fs::read_dir(dir_path)?;
     for file in dir {
         let file_path = file?.path();
-        let content = read_entire_xml_file(&file_path)?;
-        println!("{file_path:?} => {size}", size = content.len());
+
+        let content = read_entire_xml_file(&file_path)?
+            .chars()
+            .collect::<Vec<_>>();    
+
+        let mut tf = HashMap::<String, usize>::new();
+
+
+        for token in Lexer::new(&content) {
+            let term = token.iter().map(|x| x.to_ascii_uppercase()).collect::<String>();
+            if let Some(freq) = tf.get_mut(&term) {
+                *freq += 1;
+            } else {
+                tf.insert(term, 1);
+            }
+        }
+
+
+        let mut stats = tf.iter().collect::<Vec<_>>();
+        stats.sort_by_key(|(_, f)| *f);
+        stats.reverse();
+
+        println!("{file_path:?}");
+        for (t, f) in stats.iter().take(10) {
+            println!("    {t} => {f}")
+        }
     }
-    */
     Ok(())
 }
            
