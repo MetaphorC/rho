@@ -1,7 +1,7 @@
 
 use std::io;
 use std::fs::{self, File};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use xml::reader::{XmlEvent, EventReader};
 use std::collections::HashMap;
 
@@ -86,17 +86,25 @@ fn read_entire_xml_file<P: AsRef<Path>>(file_path: P) -> io::Result<String> {
     Ok(content)
 }
 
+type TermFreq = HashMap::<String, usize>;
+type TermFreqIndex = HashMap<PathBuf, TermFreq>;
+
 fn main() -> io::Result<()>{
     let dir_path = "docs.gl/gl4";
     let dir = fs::read_dir(dir_path)?;
+    let top_n = 20;
+    let mut tf_index = TermFreqIndex::new();
+
     for file in dir {
         let file_path = file?.path();
+
+        println!("Indexing {:?}...", &file_path); 
 
         let content = read_entire_xml_file(&file_path)?
             .chars()
             .collect::<Vec<_>>();    
 
-        let mut tf = HashMap::<String, usize>::new();
+        let mut tf = TermFreq::new();
 
 
         for token in Lexer::new(&content) {
@@ -113,11 +121,14 @@ fn main() -> io::Result<()>{
         stats.sort_by_key(|(_, f)| *f);
         stats.reverse();
 
-        println!("{file_path:?}");
-        for (t, f) in stats.iter().take(10) {
-            println!("    {t} => {f}")
-        }
+    
+        tf_index.insert(file_path, tf);
     }
+
+    for (path, tf) in tf_index {
+        println!("{path:?} has {count} unique tokens", count = tf.len());
+    }
+
     Ok(())
 }
            
